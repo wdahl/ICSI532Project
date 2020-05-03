@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import collections
 import numpy as np
 from datetime import datetime
+import time
 
 #####################################################################################
 # Task 1:                                                                           #
@@ -11,40 +12,48 @@ from datetime import datetime
 #   and recivied relations. in G, a directed edge e_uv denotes the number of emails #
 #   sent from node u to node v over the entire dataset.                             #
 #####################################################################################
-   
+print(f"\n\n{'《 T A S K  1 》 B E G I N S ':=^52}")   
 Graph = nx.DiGraph() # Directed Graph for the emails
 
 # Reads the edges in from the dataset
 with open('532projectdataset.txt', 'r') as data:
     # Loops through each line in the file
+    
+    # This is a middle data in a dictionary in the form of {(u,v): weight, ...}
+    # we'll prepare this middle data first and then make a weighted edge list for netwokx to read from
+    # although this is more verbose than try and except, it has better running time
+    weighted_edges = {} 
+
+    # Process raw data
     for line in data.readlines():
         line = line.rstrip() # Removes trailing whitespace
-        line = line.split(' ') # Splits line into a list on spaces
+        
+        # we know every row is in the form (timestamp, email1, email2), so we unpack the variables
+        timestamp, u, v = line.split(' ') # Splits line into a list on spaces
 
-        # Calculates the number of times a edge apears in the file
-        # This number will be the weight of the edge
-        # Represents the number of times a specific email has communicated with another email
-        # Use a try/except to increment the weight of the edge each time it is found.
-        # I'm using a try/except because direct adressesing into the graph using Graph[line[1]][line[2]]['weight'] is faster than looking through the edges that already exists
-        try:
-            # If the edge exists in the graph then encrement the weight by one
-            Graph[line[1]][line[2]]['weight'] += 1
-        except:
-            # If the edge does not exsit add it and set the weight to 1
-            Graph.add_edge(line[1], line[2], weight=1)
-
+        if (u,v) not in weighted_edges: # if we haven't seen this edge before, weight is 1
+            weighted_edges[(u,v)] = 1
+        else:                           # otherwise, increment the weight
+            weighted_edges[(u,v)] += 1
+    
+    # Now we're preparing the weighted edge list for networkx to read from
+    weighted_edge_list = [] # each item in this list will be in the form (u , v , weight)
+    for edge in weighted_edges.keys():
+        weighted_edge_list.append((edge[0],edge[1],weighted_edges[edge]))
+    
+    Graph.add_weighted_edges_from(weighted_edge_list)
 #####################################################################################
 # Summary statistics:                                                               #
 #   Number of nodes, edges, and bidrectional edges. In, out, and total degree for   #
 #   each email and the diameter of the network.                                     #
 #####################################################################################
-
+print(f"{'[ Summary statistics ]':.<52}")
 # Gets number of nodes and edges
 # I store these values so i can use them later for calculations without needing to re-count
 number_of_nodes = Graph.number_of_nodes()
 number_of_edges = Graph.number_of_edges()
-print("Number of nodes: ", number_of_nodes)
-print("Number of edges: ", number_of_edges)
+print("- Number of nodes: ", number_of_nodes)
+print("- Number of edges: ", number_of_edges)
 
 # Counts the number of bidirectional edges
 count = 0
@@ -54,7 +63,7 @@ for edge in Graph.edges:
         count += 1
 
 # We have to divid the coutn by 2 because each bidirectional edge is counted twice.
-print("Number of Bidirectional edges: ", count/2)
+print("- Number of Bidirectional edges: ", count/2)
 
 # Calculates the in, out, and total degree for each node in the graph
 in_degree = Graph.in_degree()
@@ -77,28 +86,27 @@ average_in = sum(dict(in_degree).values()) / number_of_nodes
 average_out =  sum(dict(out_degree).values()) / number_of_nodes
 average_degree = sum(dict(degree).values()) / number_of_nodes
 
-print("Min in degree: ", min_in)
-print("Max in degree: ", max_in)
-print("Average in degree: ", average_in)
+# Print out a matrix for the above information
+print(f"\n{'< MATRICE >':=^52}")
+print(f"{'': ^10}|{'in degree': ^13}|{'out degree': ^13}|{'total degree': ^13}")
+print(f"{'':-<52}")
+print(f"{'min': <10}|{min_in: ^13}|{min_out: ^13}|{min_degree: ^13}")
+print(f"{'average': <10}|{average_in: ^13.6}|{average_out: ^13.6}|{average_degree: ^13.6}")
+print(f"{'max': <10}|{max_in: ^13}|{max_out: ^13}|{max_degree: ^13}")
 
-print("Min out degree: ", min_out)
-print("Max out degree: ", max_out)
-print("Average out degree: ", average_out)
-
-print("Min total degree: ", min_degree)
-print("Max total degree: ", max_degree)
-print("Average total degree: ", average_degree)
-
+# breakpoint()
 # TODO:
 #   Trys to compute the diameter of the Graph
 #   When I run this i get an error because there is a node that can not be reached from another node
 #   Thus, the diameter of the Graph would be infite.
 #   This may be wrong, I'm not really sure
 try:
-    print('Diameter: ', nx.diameter(Graph))
+    strongly_cc = max(nx.strongly_connected_components(Graph),key=len)
+    print('Diameter: ', nx.diameter(strongly_cc))
 except:
     print('Found infinite path length because the digraph is not strongly connected')
 
+breakpoint()
 #####################################################################################
 # Plot the distrobution of degrees, in-degrees, and out-degrees of the nodes in G   #
 # in the same plot on a log-log sclae. For each of the three degree distobutions,   #
