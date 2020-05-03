@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import collections
 import numpy as np
+from datetime import datetime
 
 #####################################################################################
 # Task 1:                                                                           #
@@ -128,25 +129,25 @@ out_deg, out_cnt = zip(*outCount.items())
 m, c = np.polyfit(np.log(deg), np.log(cnt), 1) # gets the slope (m) and the y intercept (C) for the regression line
 deg_fit = np.exp(m*np.log(deg) + c) # gets the y' points for the regression line
 
+# plots the degree distrobution
+plt.loglog(deg, cnt, label='Total Degree')
+plt.loglog(deg, deg_fit, label='m=' + str(m) + ',c=' + str(c))
+
 # Calculates the line of best fit for the in degree distrobution
 m, c = np.polyfit(np.log(in_deg), np.log(in_cnt), 1)
 in_deg_fit = np.exp(m*np.log(in_deg) + c)
+
+# plots the in degree distrobution
+plt.loglog(in_deg, in_cnt, label='In Degree')
+plt.loglog(in_deg, in_deg_fit, label='m=' + str(m) + ',c=' + str(c))
 
 # Calculates the line of best fit for the out degree distrobution
 m, c = np.polyfit(np.log(out_deg), np.log(out_cnt), 1)
 out_deg_fit = np.exp(m*np.log(out_deg) + c)
 
-# plots the degree distrobution
-plt.loglog(deg, cnt, label='Total Degree')
-plt.loglog(deg, deg_fit, label='Total Degree Best Fit')
-
-# plots the in degree distrobution
-plt.loglog(in_deg, in_cnt, label='In Degree')
-plt.loglog(in_deg, in_deg_fit, label='In Degree Best Fit')
-
 # plots the out degree distrobution
 plt.loglog(out_deg, out_cnt, label='Out Degree')
-plt.loglog(out_deg, out_deg_fit, label='Out Degree Best Fit')
+plt.loglog(out_deg, out_deg_fit, label='m=' + str(m) + ',c=' + str(c))
 
 plt.title('Degree Distrobutions')
 plt.ylabel('Count')
@@ -158,7 +159,7 @@ plt.show()
 #####################################################################################
 # TODO:                                                                             #
 #   Compare the fitted power-law for the degree distrobution to the (i) exponential #
-#   and (ii) log-normal distobutions. Indictae which model is a better fir, and     #
+#   and (ii) log-normal distobutions. Indictae which model is a better fit, and     #
 #   explain why.                                                                    #
 #   I'm not really sure what this is asking and I don't think it is a programming   #
 #   But more of a analysis question.                                                #
@@ -212,9 +213,6 @@ for node in Graph:
     
     # Adds the number fo nodes, edges, total weigths and max eigenvalue to their respective lists
     node_count = G_u.number_of_nodes() # Gets number of nodes in the egonet
-    node_counts.append(G_u.number_of_nodes())
-    edge_counts.append(G_u.number_of_edges())
-    weight_totals.append(weight_total)
 
     # TODO:
     #   Only computes the eigenvalue when the egonet has more than one node
@@ -222,17 +220,16 @@ for node in Graph:
     #   selects the max eigenvalue if edges exstis, otherwise sets the eigenvalue to 0
     #   I am not sure if this method is correct or not
     if node_count > 1:
+        node_counts.append(node_count)
+        edge_counts.append(G_u.number_of_edges())
+        weight_totals.append(weight_total)
+
         L = nx.normalized_laplacian_matrix(G_u) # Computes the adjacency matrix
         e = np.linalg.eigvals(L.A) # Gets the egienvalues of the adjacency matrix
 
         # Gets the max eginvalue of the Adjaceny matrix
         # Adds it to the eigenvalues list
-        eigenvalues.append(max(e))
-
-    # if there are no edges in the egonet then set the eigenvalue to 0
-    else:
-        # Adds the value to the eigenvalues list
-        eigenvalues.append(0)
+        eigenvalues.append(sum(e))
 
 #####################################################################################
 # Plot on a log-log scale:                                                          #
@@ -257,7 +254,7 @@ plt.loglog(node_counts, edge_counts, 'o')
 # Gets slope and y intercept for the line of best fit
 m, c = np.polyfit(np.log(node_counts), np.log(edge_counts), 1)
 edge_fit = np.exp(m*np.log(node_counts) + c) # computes the line of best fit
-plt.loglog(node_counts, edge_fit, label='Best Fit') # Plots the line of best fit
+plt.loglog(node_counts, edge_fit, label='m=' + str(m) + ',c=' + str(c)) # Plots the line of best fit
 
 # TODO:
 #   Computes the line to represent the stars and cliques
@@ -271,7 +268,6 @@ plt.loglog(node_counts, cliques, label='Cliques')
 
 # Does not display plot yet 
 # Have to calculate the "out-of-norm" nodes first
-plt.legend()
 plt.ylabel('Edges')
 plt.xlabel('Nodes')
 
@@ -335,16 +331,66 @@ for data in o_u_list:
     x_u_data.append(data['x_u'])
 
 # Highlights the top scoring o(u) nodes with triangles 
-plt.loglog(x_u_data, y_u_data, '^')
+plt.loglog(x_u_data, y_u_data, '^', label='Top 20 o(u) scores')
+plt.legend()
 plt.show()
 
 # TODO:
 #   This graph does not seem to have a power distrobution
 #   Thus, you can not compute the o(u) score for it
 #   I Have no cluse if this is correct My methods or understanding could be wrong
+m, c = np.polyfit(np.log(weight_totals), np.log(eigenvalues), 1)
+weight_fit = np.exp(m*np.log(weight_totals) + c)
 plt.loglog(weight_totals, eigenvalues, 'o')
+plt.loglog(weight_totals, weight_fit, label='m=' + str(m) + ',c=' + str(c))
 plt.ylabel('Eigen Values')
 plt.xlabel('weight_totals')
+
+o_u_list = list(dict()) 
+
+# Loops over the node and edge counts computed from before for each egonet
+for i in range(len(node_counts)):
+    x_u = weight_totals[i] # x_u for the power law equation
+    y_u = eigenvalues[i] # y_u for the power law equation
+
+    # TODO:
+    #   Computes expected value of y_u using the power law equeation
+    #   I assumed the alpha was the slope from the best fit line
+    #   and that C was the y intercept from the best fit line
+    #   but I am not 100% sure
+    c_x = c*(x_u**m)
+
+    o_u_dict = dict() # egonet o(u) info; goes in the o(u) list
+
+    # Computes o(u)
+    o_u = (max(y_u, c_x) / min(y_u, c_x)) * np.log(abs(y_u - c_x) + 1)
+
+    # Stores the vlaues needed to plot into the o_u_dict
+    o_u_dict['o_u'] = o_u
+    o_u_dict['x_u'] = x_u
+    o_u_dict['y_u'] = y_u
+
+    # adds the o_u_dict for the egonet to the list of o(u)'s for each egonet
+    o_u_list.append(o_u_dict)
+
+# Sorts the list of o(u) dicts in decesnding order by the value o_u in each dict
+o_u_list_sorted = sorted(o_u_list, key=lambda x: x['o_u'], reverse=True)
+o_u_list = o_u_list_sorted[:20] # takes the top 20 o(u) scores
+
+# Creates lists of the actual y_u values and the given x_u values 
+# to be used for ploting from the top 20 o(u) scores
+y_u_data = list() 
+x_u_data = list()
+# Loops through top 20 ego nets o(u) info
+for data in o_u_list:
+    # Adds the actual y_u to the list of y_u data
+    # Adds the x_u of the ego net to the list of x_u data
+    y_u_data.append(data['y_u'])
+    x_u_data.append(data['x_u'])
+
+# Highlights the top scoring o(u) nodes with triangles 
+plt.loglog(x_u_data, y_u_data, '^', label='Top 20 o(u) scores')
+plt.legend()
 plt.show()
 
 #####################################################################################
@@ -356,35 +402,32 @@ plt.show()
 #   number of emails senf from node u to node v over that sample                    #
 #####################################################################################
 
-# TODO:
-#   Reads in the network from the dataset as a temporal network
-#   Reads the network in 5 chuncks of size 724867 each (the toal number of lines in the file diveded by 5)
-#   I Have no clue what the time interval are actually supposed to be
-#   Or what emails go in each time interval
-#   So i am not to sure if this is completly correct
-
-count = 0 # count of the number of lines read from the file
 strong_componet_sizes = list() # list of the strong componet sizes
 weak_componet_sizes = list() # list of the eak componete sizes
 densities = list() # list of the densites of each temporal graph
 clusterings = list() # list of the clustering coieficents for each temporal graph
 G_t = nx.DiGraph() # The directed temporal graph
-
 # Reads the edges in from the dataset file
 with open('532projectdataset.txt', 'r') as dataset:
     # Reads in the file line by line
+    day = None
     for line in dataset.readlines():
         line = line.rstrip() # removes white space
         line = line.split(' ') # splits the line into a list on spaces
 
+        ts = int(line[0])
+        newDay = datetime.utcfromtimestamp(ts).strftime('%d')
+
+        if day == None:
+            day = newDay
+
         # Reads in 724867 lines at a time
-        if count < 724867:
+        if day == newDay:
             # Same stratagy as before for counting the number of times a edge appears in the dataset
             try:
-                G_t.add_edge(line[1], line[2], weight=G_t[line[1]][line[2]]['weight']+1)
+                G_t[line[1]][line[2]]['weight'] += 1
             except:
                 G_t.add_edge(line[1], line[2], weight=1)
-            count += 1 # Increment count
 
         # When 724867 lines have been read fromt he file
         else:
@@ -403,7 +446,7 @@ with open('532projectdataset.txt', 'r') as dataset:
             # re-intialzies the count to 1
             G_t = nx.DiGraph()
             G_t.add_edge(line[1], line[2], weight=1)
-            count = 1
+            day = None
 
 # Computes the componte sizes, density, and average clustering coeificent for the last temporal graph
 strong_componet_sizes.append(len(max(nx.strongly_connected_components(G_t), key=len)))
@@ -420,15 +463,15 @@ clusterings.append(nx.average_clustering(G_t))
 #####################################################################################
 
 # Plots the stong and weak compnent sizes for each temporal graph
-plt.plot([1, 2, 3, 4, 5], strong_componet_sizes, label='Strongly Connected Componet')
-plt.plot([1, 2, 3, 4, 5], weak_componet_sizes, label='Weakly Connected Componet')
+plt.loglog(range(len(strong_componet_sizes)), weak_componet_sizes, label='Weakly Connected Componet')
+plt.loglog(range(len(strong_componet_sizes)), strong_componet_sizes, label='Strongly Connected Componet')
 plt.xlabel('Days')
 plt.ylabel('Largest Componet Size')
 plt.legend()
 plt.show()
 
 # Plots the density of each temporal Graph
-plt.plot([1, 2, 3, 4, 5], densities)
+plt.loglog(range(len(strong_componet_sizes)), densities)
 plt.xlabel('Days')
 plt.ylabel('Density')
 plt.show()
@@ -442,7 +485,7 @@ plt.show()
 #####################################################################################
 
 # Plots the average clustering coeifecints for each temporal graph.
-plt.plot([1, 2, 3, 4, 5], clusterings)
+plt.loglog(range(len(strong_componet_sizes)), clusterings)
 plt.xlabel('Days')
 plt.ylabel('Clustering')
 plt.show()
