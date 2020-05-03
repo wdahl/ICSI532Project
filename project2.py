@@ -463,15 +463,15 @@ clusterings.append(nx.average_clustering(G_t))
 #####################################################################################
 
 # Plots the stong and weak compnent sizes for each temporal graph
-plt.loglog(range(len(strong_componet_sizes)), weak_componet_sizes, label='Weakly Connected Componet')
-plt.loglog(range(len(strong_componet_sizes)), strong_componet_sizes, label='Strongly Connected Componet')
+plt.plt(range(len(strong_componet_sizes)), weak_componet_sizes, label='Weakly Connected Componet')
+plt.plt(range(len(strong_componet_sizes)), strong_componet_sizes, label='Strongly Connected Componet')
 plt.xlabel('Days')
 plt.ylabel('Largest Componet Size')
 plt.legend()
 plt.show()
 
 # Plots the density of each temporal Graph
-plt.loglog(range(len(strong_componet_sizes)), densities)
+plt.plt(range(len(strong_componet_sizes)), densities)
 plt.xlabel('Days')
 plt.ylabel('Density')
 plt.show()
@@ -485,7 +485,7 @@ plt.show()
 #####################################################################################
 
 # Plots the average clustering coeifecints for each temporal graph.
-plt.loglog(range(len(strong_componet_sizes)), clusterings)
+plt.plt(range(len(strong_componet_sizes)), clusterings)
 plt.xlabel('Days')
 plt.ylabel('Clustering')
 plt.show()
