@@ -1,9 +1,14 @@
-import networkx as nx
+import networkx as nx # v2.4
 import matplotlib.pyplot as plt
 import collections
 import numpy as np
 from datetime import datetime
 import time
+
+def duration(start_time: float) -> str:
+    '''return a string format of a duration from the given time up til now.'''
+    end_time = time.time() - start_time
+    return f"{end_time:.5}"
 
 #####################################################################################
 # Task 1:                                                                           #
@@ -12,7 +17,7 @@ import time
 #   and recivied relations. in G, a directed edge e_uv denotes the number of emails #
 #   sent from node u to node v over the entire dataset.                             #
 #####################################################################################
-print(f"\n\n{'《 T A S K  1 》 B E G I N S ':=^52}")   
+
 Graph = nx.DiGraph() # Directed Graph for the emails
 
 # Reads the edges in from the dataset
@@ -31,6 +36,10 @@ with open('532projectdataset.txt', 'r') as data:
         # we know every row is in the form (timestamp, email1, email2), so we unpack the variables
         timestamp, u, v = line.split(' ') # Splits line into a list on spaces
 
+        datetimeObj = datetime.fromtimestamp(int(timestamp)) # filter out weekend datas
+        if datetimeObj.strftime('%w') in {'0','6'}: # if the timestamp is Sunday or Saturday
+            continue 
+
         if (u,v) not in weighted_edges: # if we haven't seen this edge before, weight is 1
             weighted_edges[(u,v)] = 1
         else:                           # otherwise, increment the weight
@@ -44,125 +53,143 @@ with open('532projectdataset.txt', 'r') as data:
     Graph.add_weighted_edges_from(weighted_edge_list)
 #####################################################################################
 # Summary statistics:                                                               #
+# TODO: filter out weekend datas
 #   Number of nodes, edges, and bidrectional edges. In, out, and total degree for   #
 #   each email and the diameter of the network.                                     #
 #####################################################################################
-print(f"{'[ Summary statistics ]':.<52}")
-# Gets number of nodes and edges
-# I store these values so i can use them later for calculations without needing to re-count
-number_of_nodes = Graph.number_of_nodes()
-number_of_edges = Graph.number_of_edges()
-print("- Number of nodes: ", number_of_nodes)
-print("- Number of edges: ", number_of_edges)
+def summary_statistics():
+    print(f"\n\n{'《 T A S K  1 》 B E G I N S ':=^52}")
+    print(f"{'[ Summary statistics ]':.<52}")
+    # Gets number of nodes and edges
+    # I store these values so i can use them later for calculations without needing to re-count
+    number_of_nodes = Graph.number_of_nodes()
+    number_of_edges = Graph.number_of_edges()
+    print("- Number of nodes: ", number_of_nodes)
+    print("- Number of edges: ", number_of_edges)
 
-# Counts the number of bidirectional edges
-count = 0
-for edge in Graph.edges:
-    # For edge (u, v) if edge (v, u) exists then there is a bidirectional edge
-    if Graph.number_of_edges(edge[1], edge[0]) > 0:
-        count += 1
+    # Counts the number of bidirectional edges
+    count = 0
+    for edge in Graph.edges:
+        # For edge (u, v) if edge (v, u) exists then there is a bidirectional edge
+        if Graph.number_of_edges(edge[1], edge[0]) > 0:
+            count += 1
 
-# We have to divid the coutn by 2 because each bidirectional edge is counted twice.
-print("- Number of Bidirectional edges: ", count/2)
+    # We have to divid the coutn by 2 because each bidirectional edge is counted twice.
+    print("- Number of Bidirectional edges: ", count//2)
 
-# Calculates the in, out, and total degree for each node in the graph
-in_degree = Graph.in_degree()
-out_degree = Graph.out_degree()
-degree = Graph.degree()
+    # Calculates the in, out, and total degree for each node in the graph
+    in_degree = Graph.in_degree()
+    out_degree = Graph.out_degree()
+    degree = Graph.degree()
 
-# Gets the min in, out, and total degree
-# I cast in_degree, out_degree, and degree to dict() so I can use the values() function to get a list of the values and easily get the min, max, and averages.
-min_in = min(dict(in_degree).values())
-min_out =  min(dict(out_degree).values())
-min_degree = min(dict(degree).values())
+    # Gets the min in, out, and total degree
+    # I cast in_degree, out_degree, and degree to dict() so I can use the values() function to get a list of the values and easily get the min, max, and averages.
+    min_in = min(dict(in_degree).values())
+    min_out =  min(dict(out_degree).values())
+    min_degree = min(dict(degree).values())
 
-# Gets the max in, out, and total degree
-max_in = max(dict(in_degree).values())
-max_out =  max(dict(out_degree).values())
-max_degree = max(dict(degree).values())
+    # Gets the max in, out, and total degree
+    max_in = max(dict(in_degree).values())
+    max_out =  max(dict(out_degree).values())
+    max_degree = max(dict(degree).values())
 
-# Gets the average in, out, and total degree
-average_in = sum(dict(in_degree).values()) / number_of_nodes
-average_out =  sum(dict(out_degree).values()) / number_of_nodes
-average_degree = sum(dict(degree).values()) / number_of_nodes
+    # Gets the average in, out, and total degree
+    average_in = sum(dict(in_degree).values()) / number_of_nodes
+    average_out =  sum(dict(out_degree).values()) / number_of_nodes
+    average_degree = sum(dict(degree).values()) / number_of_nodes
 
-# Print out a matrix for the above information
-print(f"\n{'< MATRICE >':=^52}")
-print(f"{'': ^10}|{'in degree': ^13}|{'out degree': ^13}|{'total degree': ^13}")
-print(f"{'':-<52}")
-print(f"{'min': <10}|{min_in: ^13}|{min_out: ^13}|{min_degree: ^13}")
-print(f"{'average': <10}|{average_in: ^13.6}|{average_out: ^13.6}|{average_degree: ^13.6}")
-print(f"{'max': <10}|{max_in: ^13}|{max_out: ^13}|{max_degree: ^13}")
+    # Print out a matrix for the above information
+    print(f"\n{'[ MATRICE ]':.<52}")
+    print(f"{'': ^10}|{'in degree': ^13}|{'out degree': ^13}|{'total degree': ^13}")
+    print(f"{'':-<10}+{'':-<13}+{'':-<13}+{'':-<13}")
+    print(f"{'min': <10}|{min_in: ^13}|{min_out: ^13}|{min_degree: ^13}")
+    print(f"{'average': <10}|{average_in: ^13.6}|{average_out: ^13.6}|{average_degree: ^13.6}")
+    print(f"{'max': <10}|{max_in: ^13}|{max_out: ^13}|{max_degree: ^13}")
 
+# summary_statistics()
 # breakpoint()
 # TODO:
 #   Trys to compute the diameter of the Graph
 #   When I run this i get an error because there is a node that can not be reached from another node
 #   Thus, the diameter of the Graph would be infite.
 #   This may be wrong, I'm not really sure
-try:
-    strongly_cc = max(nx.strongly_connected_components(Graph),key=len)
-    print('Diameter: ', nx.diameter(strongly_cc))
-except:
-    print('Found infinite path length because the digraph is not strongly connected')
 
-breakpoint()
+def compute_diameter():
+    '''
+    this function will compute and print the diameter of the largest components
+    '''
+    s = time.time() # for timing purposes
+    strongly_cc_nodes = max(nx.strongly_connected_components(Graph),key=len)
+    scc_edges = list(filter(lambda item: item[0] in strongly_cc_nodes and item[1] in strongly_cc_nodes , weighted_edge_list))
+    largest_scc = nx.DiGraph()
+    largest_scc.add_weighted_edges_from(scc_edges)
+    print(f"compute time: {duration(s)}")
+
+# compute_diameter()
+
 #####################################################################################
 # Plot the distrobution of degrees, in-degrees, and out-degrees of the nodes in G   #
 # in the same plot on a log-log sclae. For each of the three degree distobutions,   #
 # draw the corresponding best fit least-square regression line in the same log-log  #
 # plot. Show the coefficients of each fited line in the legened of the plot         #
 #####################################################################################
+def plot_degree_distributions():
+    degree = Graph.degree()
+    in_degree = Graph.in_degree()
+    out_degree = Graph.out_degree()
 
-# Calculates the degree distobution
-degree_sequence = sorted([d for n, d in degree], reverse=True) # sorts the degrees in descinding order
-degreeCount = collections.Counter(degree_sequence) # counts the number of times a degree occurs
-del degreeCount[0] # Removes instances when the degree is 0
-deg, cnt = zip(*degreeCount.items()) # gets the list of the degrees and the corisponding count
+    # Calculates the degree distobution
+    degree_sequence = sorted([d for n, d in degree], reverse=True) # sorts the degrees in descinding order
+    degreeCount = collections.Counter(degree_sequence) # counts the number of times a degree occurs
+    del degreeCount[0] # Removes instances when the degree is 0
+    deg, cnt = zip(*degreeCount.items()) # gets the list of the degrees and the corisponding count
 
-# Calculates the in degree distrobution
-in_sequence = sorted([d for n, d in in_degree], reverse=True)
-inCount = collections.Counter(in_sequence)
-del inCount[0]
-in_deg, in_cnt = zip(*inCount.items())
+    # Calculates the in degree distrobution
+    in_sequence = sorted([d for n, d in in_degree], reverse=True)
+    inCount = collections.Counter(in_sequence)
+    del inCount[0]
+    in_deg, in_cnt = zip(*inCount.items())
 
-# Calculates the out degree distrobution
-out_sequence = sorted([d for n, d in out_degree], reverse=True)
-outCount = collections.Counter(out_sequence)
-del outCount[0]
-out_deg, out_cnt = zip(*outCount.items())
+    # Calculates the out degree distrobution
+    out_sequence = sorted([d for n, d in out_degree], reverse=True)
+    outCount = collections.Counter(out_sequence)
+    del outCount[0]
+    out_deg, out_cnt = zip(*outCount.items())
 
-# Calculates the line of best fit for the total degree distrobution
-# Have to take the log of the degree and the count as the ploting will be done on a log-log scale
-m, c = np.polyfit(np.log(deg), np.log(cnt), 1) # gets the slope (m) and the y intercept (C) for the regression line
-deg_fit = np.exp(m*np.log(deg) + c) # gets the y' points for the regression line
+    # Calculates the line of best fit for the total degree distrobution
+    # Have to take the log of the degree and the count as the ploting will be done on a log-log scale
+    m, c = np.polyfit(np.log(deg), np.log(cnt), 1) # gets the slope (m) and the y intercept (C) for the regression line
+    deg_fit = np.exp(m*np.log(deg) + c) # gets the y' points for the regression line
 
-# plots the degree distrobution
-plt.loglog(deg, cnt, label='Total Degree')
-plt.loglog(deg, deg_fit, label='m=' + str(m) + ',c=' + str(c))
+    plt.figure(1, [10,5])
+    # plots the degree distrobution
+    plt.loglog(deg, cnt, color='#FF6666', label='Total Degree')
+    plt.loglog(deg, deg_fit,'--', color='#FF9696', label=f"Regression line: log y = {m:+.3} log x + {c:.3}")
 
-# Calculates the line of best fit for the in degree distrobution
-m, c = np.polyfit(np.log(in_deg), np.log(in_cnt), 1)
-in_deg_fit = np.exp(m*np.log(in_deg) + c)
+    # Calculates the line of best fit for the in degree distrobution
+    m, c = np.polyfit(np.log(in_deg), np.log(in_cnt), 1)
+    in_deg_fit = np.exp(m*np.log(in_deg) + c)
 
-# plots the in degree distrobution
-plt.loglog(in_deg, in_cnt, label='In Degree')
-plt.loglog(in_deg, in_deg_fit, label='m=' + str(m) + ',c=' + str(c))
+    # plots the in degree distrobution
+    plt.loglog(in_deg, in_cnt, color='#668CFF', label='In Degree')
+    plt.loglog(in_deg, in_deg_fit,'--', color='#A3BAFF', label=f"Regression line: log y = {m:+.3} log x + {c:.3} ")
 
-# Calculates the line of best fit for the out degree distrobution
-m, c = np.polyfit(np.log(out_deg), np.log(out_cnt), 1)
-out_deg_fit = np.exp(m*np.log(out_deg) + c)
+    # Calculates the line of best fit for the out degree distrobution
+    m, c = np.polyfit(np.log(out_deg), np.log(out_cnt), 1)
+    out_deg_fit = np.exp(m*np.log(out_deg) + c)
 
-# plots the out degree distrobution
-plt.loglog(out_deg, out_cnt, label='Out Degree')
-plt.loglog(out_deg, out_deg_fit, label='m=' + str(m) + ',c=' + str(c))
+    # plots the out degree distrobution
+    plt.loglog(out_deg, out_cnt, color='#66FF8C', label='Out Degree')
+    plt.loglog(out_deg, out_deg_fit,'--', color='#B3FF66', label=f"regression line: log y = {m:+.3} log x + {c:.3}")
 
-plt.title('Degree Distrobutions')
-plt.ylabel('Count')
-plt.xlabel('Degree')
-plt.legend()
-plt.ylim(ymin=1) #sets the min y value to 1 for the graph
-plt.show()
+    plt.title('Degree Distributions')
+    plt.ylabel('Count')
+    plt.xlabel('Degree')
+    plt.legend()
+    plt.ylim(ymin=1) #sets the min y value to 1 for the graph
+    plt.show()
+
+# plot_degree_distributions()
 
 #####################################################################################
 # TODO:                                                                             #
@@ -173,26 +200,32 @@ plt.show()
 #   But more of a analysis question.                                                #
 #####################################################################################
 
+
+
 #####################################################################################
 # Task 2:                                                                           #
 #   Extract the 1.5 egonetwork, G_u, of every node u in G. Note that for the        #
 #   purposes of this task, we will treat G_u as undirected                          #
 #####################################################################################
 
+# Task 2 --1
 #####################################################################################
 # Compute the total number of nodes, V_u, edges, E_u, and total weight, W_u, for    #
 # each G_u. Also compute the principal eigenvalue, lamda_wu, of the weighted        #
 # adjancency matrix of each egonet G_u.                                             #
 #####################################################################################
-
+print(f"\n\n{'《 T A S K  2 》 B E G I N S ':=^52}")
 node_counts = list() # List of total number of nodes in each egonet
 edge_counts = list() # List of total number of edges in each egonet
 weight_totals = list() # List of total weights for each egonet
 eigenvalues = list() # List of max egienvalues for each egonet
-
-# Loops through each node in the Graph tp contruact the 1.5 egonet for the node
+def compute_1half_egonet():
+    for n in Graph:
+        pass
+        
+# Loops through each node in the Graph tp construct the 1.5 egonet for the node
 for node in Graph:
-    G_u = nx.ego_graph(Graph, node, 1) # Gets the 1 egonet for the node
+    G_u = nx.ego_graph(Graph, node, 1, undirected=True) # Gets the 1 egonet for the node
     G_u = G_u.to_undirected() # changes the egonet from directed to undirected
 
     # Loops over each node in the egonet twice to check for the exsitence of edges between
@@ -238,7 +271,9 @@ for node in Graph:
         # Gets the max eginvalue of the Adjaceny matrix
         # Adds it to the eigenvalues list
         eigenvalues.append(sum(e))
-
+# print(duration(t))
+breakpoint()
+# Task 2 --2
 #####################################################################################
 # Plot on a log-log scale:                                                          #
 #   (i) E_u versus V_u for every egonet G_u                                         #
@@ -257,28 +292,31 @@ for node in Graph:
 #   Plots E_u vs V_u
 #   This may be backwards. i.e. should be edges on the x-axis.
 #   I went with this way beacause it just looks nicer on the graph
-plt.loglog(node_counts, edge_counts, 'o')
+plt.figure(2,[10,5])
+plt.loglog(node_counts, edge_counts, 'o', markersize=5)
 
 # Gets slope and y intercept for the line of best fit
 m, c = np.polyfit(np.log(node_counts), np.log(edge_counts), 1)
 edge_fit = np.exp(m*np.log(node_counts) + c) # computes the line of best fit
-plt.loglog(node_counts, edge_fit, label='m=' + str(m) + ',c=' + str(c)) # Plots the line of best fit
+plt.loglog(node_counts, edge_fit, label='m=' + f'{m:.5}' + ',c=' + f'{c:.5}') # Plots the line of best fit
 
 # TODO:
 #   Computes the line to represent the stars and cliques
 #   I have no cluse what this question was asking in this regard so i just used
-#   the slope gievn in the prompt (1 for starts and 2 for cliques) alomng with
+#   the slope given in the prompt (1 for starts and 2 for cliques) along with
 #   the y intercept computed from the line fo best fit to plot the line
 stars = np.exp(1*np.log(node_counts) + c)
 cliques = np.exp(2*np.log(node_counts) + c)
-plt.loglog(node_counts, stars, label='Stars')
-plt.loglog(node_counts, cliques, label='Cliques')
+plt.loglog(node_counts, stars,'--', label='Stars')
+plt.loglog(node_counts, cliques,'--', label='Cliques')
 
 # Does not display plot yet 
 # Have to calculate the "out-of-norm" nodes first
 plt.ylabel('Edges')
 plt.xlabel('Nodes')
 
+
+# Task 2 --3
 #####################################################################################
 # Let x_u and y_u denote the observed x and y value for a node u respectivly for a  #
 # particular feature pair f(x, y). Given the power law equation y = Cx^a for f(x, y)#
@@ -342,7 +380,7 @@ for data in o_u_list:
 plt.loglog(x_u_data, y_u_data, '^', label='Top 20 o(u) scores')
 plt.legend()
 plt.show()
-
+breakpoint()
 # TODO:
 #   This graph does not seem to have a power distrobution
 #   Thus, you can not compute the o(u) score for it
@@ -471,15 +509,15 @@ clusterings.append(nx.average_clustering(G_t))
 #####################################################################################
 
 # Plots the stong and weak compnent sizes for each temporal graph
-plt.plt(range(len(strong_componet_sizes)), weak_componet_sizes, label='Weakly Connected Componet')
-plt.plt(range(len(strong_componet_sizes)), strong_componet_sizes, label='Strongly Connected Componet')
+plt.plot(range(len(strong_componet_sizes)), weak_componet_sizes, label='Weakly Connected Componet')
+plt.plot(range(len(strong_componet_sizes)), strong_componet_sizes, label='Strongly Connected Componet')
 plt.xlabel('Days')
 plt.ylabel('Largest Componet Size')
 plt.legend()
 plt.show()
 
 # Plots the density of each temporal Graph
-plt.plt(range(len(strong_componet_sizes)), densities)
+plt.plot(range(len(strong_componet_sizes)), densities)
 plt.xlabel('Days')
 plt.ylabel('Density')
 plt.show()
