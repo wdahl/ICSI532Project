@@ -18,42 +18,67 @@ def duration(start_time: float) -> str:
 #   sent from node u to node v over the entire dataset.                             #
 #####################################################################################
 
-Graph = nx.DiGraph() # Directed Graph for the emails
+
 
 # Reads the edges in from the dataset
-with open('532projectdataset.txt', 'r') as data:
-    # Loops through each line in the file
-    
-    # This is a middle data in a dictionary in the form of {(u,v): weight, ...}
-    # we'll prepare this middle data first and then make a weighted edge list for netwokx to read from
-    # although this is more verbose than try and except, it has better running time
-    weighted_edges = {} 
-
-    # Process raw data
-    for line in data.readlines():
-        line = line.rstrip() # Removes trailing whitespace
+def prepare_weighted_edge_list(designated_file: str):
+    '''
+    This function will prepare the weighted edgelist in dataset,
+    and wrtie the data into designated file with each line in the format of "u v weight"
+    '''
+    with open('532projectdataset.txt', 'r') as data:
+        # Loops through each line in the file
         
-        # we know every row is in the form (timestamp, email1, email2), so we unpack the variables
-        timestamp, u, v = line.split(' ') # Splits line into a list on spaces
+        # This is a middle data in a dictionary in the form of {(u,v): weight, ...}
+        # we'll prepare this middle data first and then make a weighted edge list for netwokx to read from
+        # although this is more verbose than try and except, it has better running time
+        weighted_edges = {} 
 
-        datetimeObj = datetime.fromtimestamp(int(timestamp)) # filter out weekend datas
-        if datetimeObj.strftime('%w') in {'0','6'}: # if the timestamp is Sunday or Saturday
-            continue 
+        # Process raw data
+        for line in data.readlines():
+            line = line.rstrip() # Removes trailing whitespace
+            
+            # we know every row is in the form (timestamp, email1, email2), so we unpack the variables
+            timestamp, u, v = line.split(' ') # Splits line into a list on spaces
 
-        if (u,v) not in weighted_edges: # if we haven't seen this edge before, weight is 1
-            weighted_edges[(u,v)] = 1
-        else:                           # otherwise, increment the weight
-            weighted_edges[(u,v)] += 1
-    
-    # Now we're preparing the weighted edge list for networkx to read from
-    weighted_edge_list = [] # each item in this list will be in the form (u , v , weight)
-    for edge in weighted_edges.keys():
-        weighted_edge_list.append((edge[0],edge[1],weighted_edges[edge]))
-    
-    Graph.add_weighted_edges_from(weighted_edge_list)
+            # filter out weekend datas
+            datetimeObj = datetime.fromtimestamp(int(timestamp)) 
+            if datetimeObj.strftime('%w') in {'0','6'}: # if the timestamp is Sunday or Saturday
+                continue 
+
+            if (u,v) not in weighted_edges: # if we haven't seen this edge before, weight is 1
+                weighted_edges[(u,v)] = 1
+            else:                           # otherwise, increment the weight
+                weighted_edges[(u,v)] += 1
+        
+        # Now we're preparing the weighted edge list for networkx to read from
+        weighted_edge_list = [] # each item in this list will be in the form (u , v , weight)
+        for edge in weighted_edges.keys():
+            weighted_edge_list.append((edge[0],edge[1],weighted_edges[edge]))
+        
+        with open(f'./processed data/{designated_file}','w') as f:
+            for u,v,weight in weighted_edge_list:
+                f.write(f"{u} {v} {weight}\n")
+## this only need to be done once unless we change some code
+# prepare_weighted_edge_list('task1_weighted_edgelist.txt')
+
+Graph = nx.DiGraph() # Directed Graph for the emails
+weighted_edge_list = []
+
+# read the precessed data into networkx
+with open('./processed data/task1_weighted_edgelist.txt','r') as f:
+    for line in f.readlines():
+        line.strip()
+        u,v,weight = line.split(' ')
+        weight = int(weight)
+
+        weighted_edge_list.append((u,v,weight))
+
+Graph.add_weighted_edges_from(weighted_edge_list)
+
 #####################################################################################
 # Summary statistics:                                                               #
-# TODO: filter out weekend datas
+#
 #   Number of nodes, edges, and bidrectional edges. In, out, and total degree for   #
 #   each email and the diameter of the network.                                     #
 #####################################################################################
@@ -133,63 +158,57 @@ def compute_diameter():
 # draw the corresponding best fit least-square regression line in the same log-log  #
 # plot. Show the coefficients of each fited line in the legened of the plot         #
 #####################################################################################
-def plot_degree_distributions():
-    degree = Graph.degree()
-    in_degree = Graph.in_degree()
-    out_degree = Graph.out_degree()
+def plot_degree_distributions(graph: 'Graph'):
+    '''
+    This function will prepare and plot the degree distribution for a given graph
+    '''
+    class PlotData:
+        def __init__(self, name: str, degreeView: 'degree view'):
+            self.name = name
+            self.degreeView = degreeView
+            self.degs = []
+            self.deg_fit = []
+            self.cnts = []
+            self.m = 0
+            self.c = 0
 
-    # Calculates the degree distobution
-    degree_sequence = sorted([d for n, d in degree], reverse=True) # sorts the degrees in descinding order
-    degreeCount = collections.Counter(degree_sequence) # counts the number of times a degree occurs
-    del degreeCount[0] # Removes instances when the degree is 0
-    deg, cnt = zip(*degreeCount.items()) # gets the list of the degrees and the corisponding count
+    degree = graph.degree()
+    in_degree = graph.in_degree()
+    out_degree = graph.out_degree()
 
-    # Calculates the in degree distrobution
-    in_sequence = sorted([d for n, d in in_degree], reverse=True)
-    inCount = collections.Counter(in_sequence)
-    del inCount[0]
-    in_deg, in_cnt = zip(*inCount.items())
+    datas = [PlotData("Total Degree",degree) , PlotData("In Degree", in_degree) , PlotData("Out Degree", out_degree)]
+    
+    # Calculates the degree distobution, m , c and deg_fit for each degree view
+    for item in datas:
+        degree_sequence = sorted([d for n, d in item.degreeView], reverse=True) # sorts the degrees in descinding order
+        degreeCount = collections.Counter(degree_sequence) # counts the number of times a degree occurs
+        del degreeCount[0] # Removes instances when the degree is 0
+        deg, cnt = zip(*degreeCount.items()) # gets the list of the degrees and the corisponding count
+        item.degs = deg
+        item.cnts = cnt
 
-    # Calculates the out degree distrobution
-    out_sequence = sorted([d for n, d in out_degree], reverse=True)
-    outCount = collections.Counter(out_sequence)
-    del outCount[0]
-    out_deg, out_cnt = zip(*outCount.items())
-
-    # Calculates the line of best fit for the total degree distrobution
-    # Have to take the log of the degree and the count as the ploting will be done on a log-log scale
-    m, c = np.polyfit(np.log(deg), np.log(cnt), 1) # gets the slope (m) and the y intercept (C) for the regression line
-    deg_fit = np.exp(m*np.log(deg) + c) # gets the y' points for the regression line
+        # Calculates the line of best fit for the total degree distrobution
+        # Have to take the log of the degree and the count as the ploting will be done on a log-log scale
+        m, c = np.polyfit(np.log(deg), np.log(cnt), 1) # gets the slope (m) and the y intercept (C) for the regression line
+        deg_fit = np.exp(m*np.log(deg) + c) # gets the y' points for the regression line
+        item.m = m
+        item.c = c
+        item.deg_fit = deg_fit
 
     plt.figure(1, [10,5])
-    # plots the degree distrobution
-    plt.loglog(deg, cnt, color='#FF6666', label='Total Degree')
-    plt.loglog(deg, deg_fit,'--', color='#FF9696', label=f"Regression line: log y = {m:+.3} log x + {c:.3}")
-
-    # Calculates the line of best fit for the in degree distrobution
-    m, c = np.polyfit(np.log(in_deg), np.log(in_cnt), 1)
-    in_deg_fit = np.exp(m*np.log(in_deg) + c)
-
-    # plots the in degree distrobution
-    plt.loglog(in_deg, in_cnt, color='#668CFF', label='In Degree')
-    plt.loglog(in_deg, in_deg_fit,'--', color='#A3BAFF', label=f"Regression line: log y = {m:+.3} log x + {c:.3} ")
-
-    # Calculates the line of best fit for the out degree distrobution
-    m, c = np.polyfit(np.log(out_deg), np.log(out_cnt), 1)
-    out_deg_fit = np.exp(m*np.log(out_deg) + c)
-
-    # plots the out degree distrobution
-    plt.loglog(out_deg, out_cnt, color='#66FF8C', label='Out Degree')
-    plt.loglog(out_deg, out_deg_fit,'--', color='#B3FF66', label=f"regression line: log y = {m:+.3} log x + {c:.3}")
-
     plt.title('Degree Distributions')
     plt.ylabel('Count')
     plt.xlabel('Degree')
+    # plots the degree distrobution
+    for item in datas:
+        plt.loglog(item.degs, item.cnts, alpha=0.6, label=f'{item.name}')
+        plt.loglog(item.degs, item.deg_fit,'--', linewidth=0.7 , label=f"Regression line: log y = {item.m:+.5} log x + {item.c:.5}")
+    
     plt.legend()
     plt.ylim(ymin=1) #sets the min y value to 1 for the graph
     plt.show()
 
-# plot_degree_distributions()
+plot_degree_distributions(Graph)
 
 #####################################################################################
 # TODO:                                                                             #
